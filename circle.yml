@@ -1,0 +1,23 @@
+machine:
+  php:
+    version: 5.6.5
+  services:
+    - mysql
+
+database:
+  override:
+    - ./tools/db-reload-test.sh
+
+dependencies:
+  pre:
+    - sed -i 's/^;//' ~/.phpenv/versions/$(phpenv global)/etc/conf.d/xdebug.ini
+    - cd platform ; composer install --prefer-source --no-interaction
+    - cp platform/app/config/parameters_circleci.yml platform/app/config/parameters_test.yml
+  
+  cache_directories:
+    - "platform/vendor"  
+
+test:
+  override:
+    - cd platform ; ./vendor/bin/phpunit --coverage-html $CIRCLE_ARTIFACTS --log-junit $CIRCLE_TEST_REPORTS/phpunit.xml -c app src
+    

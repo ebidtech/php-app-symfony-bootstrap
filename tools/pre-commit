@@ -1,0 +1,120 @@
+#!/bin/sh
+
+PROJECT=`php -r "echo dirname(dirname(dirname(realpath('$0'))));"`
+
+STAGED_PHP_FILES_CMD=`git diff --cached --name-only --diff-filter=ACMR HEAD | grep \\\\.php`
+
+# Determine if a file list is passed
+if [ "$#" -eq 1 ]
+then
+	oIFS=$IFS
+	IFS='
+	'
+	SFILES="$1"
+	IFS=$oIFS
+fi
+SFILES=${SFILES:-$STAGED_PHP_FILES_CMD}
+
+echo "Checking PHP Lint..."
+for FILE in $SFILES
+do
+	php -l -d display_errors=0 $PROJECT/$FILE
+	if [ $? != 0 ]
+	then
+		echo "Fix the error before commit."
+		exit 1
+	fi
+	FILES="$FILES $PROJECT/$FILE"
+done
+
+if [ "$FILES" != "" ]
+then
+	echo "Running Code Sniffer..."
+#	./platform/vendor/bin/phpcs --standard=./platform/vendor/instaclick/symfony2-coding-standard/Symfony2/ruleset.xml --encoding=utf-8 -n -p $FILES
+	./platform/vendor/bin/phpcs --standard=Symfony2 --encoding=utf-8 --extensions=php -n -p $FILES
+	if [ $? != 0 ]
+	then
+		echo "Fix the error before commit."
+		exit 1
+	fi
+fi
+
+# Run JSHint validation before commit.
+echo "Checking JSHint..."
+STAGED_JS_FILES_CMD=`git diff --cached --name-only --diff-filter=ACMR HEAD | grep \\\\.js$`
+
+SFILES=""
+
+# Determine if a file list is passed
+if [ "$#" -eq 1 ]
+then
+	oIFS=$IFS
+	IFS='
+	'
+	SFILES="$1"
+	IFS=$oIFS
+fi
+
+files=${SFILES:-$STAGED_JS_FILES_CMD}
+
+pass= true
+
+if [ "$files" != "" ]; then
+    for file in ${files}; do
+
+        echo $PROJECT/$file;
+
+        ./platform/node_modules/jshint/bin/jshint $PROJECT/$file
+
+        if [ $? != 0 ]; then
+            pass=false
+        fi
+    done
+fi
+
+if [ "$pass" == "false" ]; then
+    echo "Fix the error before commit."
+    exit 1
+fi
+
+# Run scss-lint validation before commit.
+ echo "Checking scss-lint..."
+ STAGED_SCSS_FILES_CMD=`git diff --cached --name-only --diff-filter=ACMR HEAD | grep -E "(\\\\.scss)$"`
+
+ SFILES=""
+
+# Determine if a file list is passed
+ if [ "$#" -eq 1 ]
+ then
+	oIFS=$IFS
+	IFS='
+	'
+	SFILES="$1"
+	IFS=$oIFS
+fi
+
+files=${SFILES:-$STAGED_SCSS_FILES_CMD}
+
+pass= true
+
+if [ "$files" != "" ]; then
+    for file in ${files}; do
+
+        echo $PROJECT/$file;
+
+        scss-lint $PROJECT/$file
+
+        if [ "$?" != 'No SCSS files specified' && $? != 0 ]; then
+            pass=false
+        fi
+    done
+fi
+
+if $pass; then
+    exit 0
+else
+    echo "Fix the error before commit."
+    exit 1
+fi
+
+exit $?

@@ -1,0 +1,22 @@
+# Git ignore
+*.swp
+*.swo
+*.bak
+nbproject/*
+.buildpath
+.project
+.settings/
+.idea/
+Symfony2
+/.idea_modules/
+/vendor/
+/out/
+.settings
+atlassian-ide-plugin.xml
+composer.phar
+phpunit.xml
+*.ipr
+*.iws
+*.iml
+*~
+~*
